@@ -1,0 +1,17 @@
+{
+    "properties": [
+        {
+            "name": "com.demirsoft.apiservice.grpcserverport",
+            "type": "java.lang.String",
+            "description": "A description for 'com.demirsoft.apiservice.grpcserverport'"
+        }
+    ]
+}{
+    "properties": [
+        {
+            "name": "com.demirsoft.apiservice.grpcserverhost",
+            "type": "java.lang.String",
+            "description": "A description for 'com.demirsoft.apiservice.grpcserverhost'"
+        }
+    ]
+}
