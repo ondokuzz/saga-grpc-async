@@ -11,7 +11,11 @@
 - await termination of grpc channels at the client side
 - await termination of grpc server at the server side
 - create app specific exceptions
-- make grpc classes a java module and import from the microservices
+- make grpc classes a java module and import from the microservices by building it into local maven repo
+- add grpc exception handling, timeout and retries
+- use async grpc
+- test grpc timeout on failure
+- make spring rest api async with webflux
 
 # after implementation check, implement and document the following
 - unit tests
