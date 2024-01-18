@@ -19,6 +19,8 @@
 - integration tests
   - test rest controller using Spring MvcTest mock
 - load balancing mechanisms
+- delete unnecessary comments
+- Autowired'lari constructor initialize'a cevir
 - documentation
   - draw high level architecture
   - folder structure: 
