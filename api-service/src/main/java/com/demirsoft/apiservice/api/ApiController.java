@@ -1,7 +1,6 @@
 package com.demirsoft.apiservice.api;
 
-import java.time.ZonedDateTime;
-import java.util.Date;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -18,8 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.demirsoft.apiservice.api.grpc.GreeterGrpcClient;
 import com.demirsoft.apiservice.api.model.Site;
 import com.demirsoft.greeter.Saga.HelloReply;
+import com.google.common.util.concurrent.ListenableFuture;
 
-import io.grpc.stub.StreamObserver;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @RestController
 public class ApiController {
@@ -49,29 +50,25 @@ public class ApiController {
     }
 
     @GetMapping("/sites")
-    public List<Site> getSites() throws InterruptedException, ExecutionException, TimeoutException {
+    public Flux<Integer> getSites() throws InterruptedException, ExecutionException, TimeoutException {
 
         logger.info("getSites called via logger 222!!!");
         System.out.println("getSites called sout");
-        return List.<Site>of(new Site("murat", Date.from(ZonedDateTime.now().toInstant())),
-                new Site("demirsoy", Date.from(ZonedDateTime.now().plusMonths(1).toInstant())));
+        return Flux.<Integer, Integer>generate(
+                () -> 0,
+                (s, sink) -> {
+                    sink.next(s + 1);
+                    return s + 1;
+                },
+                (s) -> System.out.println(s))
+                .delayElements(Duration.ofSeconds(1)).log();
+
     }
 
     @GetMapping("/sites/grpc")
-    public List<Site> getSitesViaGrpc() {
-        StreamObserver<HelloReply> response = greeterGrpcClient.greet("murat2");
+    public Mono<Site> getSitesViaGrpc() {
+        return greeterGrpcClient.greet("murat2");
 
-        try {
-            synchronized (response) {
-                logger.info("getSites waiting for completion!!!");
-                response.wait(20000);
-                logger.info("getSites notified for completion !!!");
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return List.of();
     }
 
 }

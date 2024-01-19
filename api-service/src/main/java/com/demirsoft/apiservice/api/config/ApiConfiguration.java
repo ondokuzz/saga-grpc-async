@@ -20,6 +20,7 @@ import com.demirsoft.apiservice.api.grpc.GreeterGrpcClient;
 import com.demirsoft.apiservice.api.model.Site;
 import com.demirsoft.greeter.GreeterGrpc;
 import com.demirsoft.greeter.GreeterGrpc.GreeterBlockingStub;
+import com.demirsoft.greeter.GreeterGrpc.GreeterFutureStub;
 import com.demirsoft.greeter.GreeterGrpc.GreeterStub;
 
 import io.grpc.ManagedChannel;
@@ -73,8 +74,14 @@ public class ApiConfiguration {
     }
 
     @Bean
-    GreeterGrpcClient createGrpcClient(GreeterStub asynGreeterStub) {
+    GreeterFutureStub createFutureGrpc(ManagedChannel channel) {
+        return GreeterGrpc.newFutureStub(channel);
+
+    }
+
+    @Bean
+    GreeterGrpcClient createGrpcClient(GreeterFutureStub greeterStub) {
         logger.info("creating grpc client");
-        return new GreeterGrpcClient(asynGreeterStub);
+        return new GreeterGrpcClient(greeterStub);
     }
 }
