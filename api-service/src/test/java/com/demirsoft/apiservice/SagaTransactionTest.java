@@ -7,7 +7,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
-import com.demirsoft.apiservice.api.grpc.GreeterGrpcClient;
 import com.demirsoft.apiservice.api.grpc.InventoryServiceGrpcClient;
 import com.demirsoft.apiservice.api.grpc.PaymentServiceGrpcClient;
 import com.demirsoft.apiservice.api.saga.SagaTransaction;
@@ -27,8 +26,6 @@ import com.demirsoft.apiservice.api.services.payment.PaymentTask;
 import reactor.core.publisher.Mono;
 
 public class SagaTransactionTest<T> {
-    @Mock
-    GreeterGrpcClient grpcClient;
     @Mock
     PaymentServiceGrpcClient paymentServiceGrpcClient;
     @Mock

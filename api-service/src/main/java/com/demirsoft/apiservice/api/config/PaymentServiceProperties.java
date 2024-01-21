@@ -8,8 +8,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
 @Configuration
-@ConfigurationProperties(prefix = "com.demirsoft.apiservice")
-public class AppProperties {
+@ConfigurationProperties(prefix = "com.demirsoft.apiservice.payment")
+public class PaymentServiceProperties {
     @NotBlank
     private String grpcServerHost;
     @Min(1025)

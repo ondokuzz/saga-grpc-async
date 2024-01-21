@@ -28,8 +28,8 @@ service GrpcPaymentService {
   }
 
   enum GrpcPaymentRollbackStatus {
-    PAYMENT_ROLLBACK_COMPLETED = 1;
-    PAYMENT_ROLLBACK_FAILED = 2;
+    ROLLBACK_COMPLETED = 1;
+    ROLLBACK_FAILED = 2;
   }
 
   message GrpcPaymentRollbackResponse {

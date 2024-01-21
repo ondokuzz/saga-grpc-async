@@ -1,4 +1,4 @@
-package com.demirsoft.controller.grpc;
+package com.demirsoft.micro1.payment.grpc.impl;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -7,23 +7,23 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
-import com.demirsoft.controller.config.AppProperties;
+import com.demirsoft.micro1.payment.config.AppProperties;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 @Component
-public class GreeterGrpcServerManager {
+public class PaymentServiceGrpcServerManager {
 
     private final Logger logger = LogManager.getLogger(getClass());
 
     private final Server server;
 
-    public GreeterGrpcServerManager(AppProperties appProperties) {
+    public PaymentServiceGrpcServerManager(AppProperties appProperties) {
         logger.info("initing grpc server for {}", appProperties.getGrpcServerPort());
         server = ServerBuilder
                 .forPort(appProperties.getGrpcServerPort())
-                .addService(new GreeterGrpcServer()).build();
+                .addService(new PaymentServiceGrpcServer()).build();
 
         try {
             server.start();
@@ -48,4 +48,5 @@ public class GreeterGrpcServerManager {
             e.printStackTrace();
         }
     }
+
 }

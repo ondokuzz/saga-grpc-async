@@ -46,7 +46,7 @@ public class OrderServiceImpl implements OrderService {
         var inventoryTask = new InventoryTask(this.inventoryService, inventoryRequest);
 
         SagaTransaction transaction = new SagaTransaction(
-                List.of(paymentTask, inventoryTask),
+                List.of(paymentTask),
                 Duration.ofSeconds(10));
 
         return toOrderResponse(orderRequest, transaction.execute());

@@ -12,10 +12,12 @@ import com.demirsoft.apiservice.api.services.payment.PaymentRequest;
 import com.demirsoft.apiservice.api.services.payment.PaymentResponse;
 import com.demirsoft.apiservice.api.services.payment.PaymentService;
 import com.demirsoft.apiservice.api.services.payment.PaymentStatus;
-import com.demirsoft.grpc.payment.GrpcPaymentServiceGrpc.GrpcPaymentServiceFutureStub;
-import com.demirsoft.grpc.payment.PaymentService.GrpcPaymentRequest;
-import com.demirsoft.grpc.payment.PaymentService.GrpcPaymentResponse;
-import com.demirsoft.grpc.payment.PaymentService.GrpcPaymentStatus;
+import com.demirsoft.micro1.payment.grpc.GrpcPaymentServiceGrpc.GrpcPaymentServiceFutureStub;
+import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentRequest;
+import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentResponse;
+import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentRollbackResponse;
+import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentRollbackStatus;
+import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentStatus;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -66,6 +68,40 @@ public class PaymentServiceGrpcClient implements PaymentService {
         return completableFuture;
     }
 
+    public CompletableFuture<PaymentResponse> rollbackToCompletableFuture(
+            @Nonnull ListenableFuture<GrpcPaymentRollbackResponse> listenableFuture) {
+
+        CompletableFuture<PaymentResponse> completableFuture = new CompletableFuture<PaymentResponse>() {
+            @Override
+            public boolean cancel(boolean mayInterruptIfRunning) {
+                boolean cancelled = listenableFuture.cancel(mayInterruptIfRunning);
+                super.cancel(cancelled);
+                return cancelled;
+            }
+        };
+
+        Futures.addCallback(listenableFuture, new FutureCallback<GrpcPaymentRollbackResponse>() {
+            @Override
+            public void onSuccess(@Nonnull GrpcPaymentRollbackResponse result) {
+                completableFuture
+                        .complete(new PaymentResponse(
+                                result.getOrderId(),
+                                result.getUserId(),
+                                result.getProductId(),
+                                result.getProductCount(),
+                                result.getTotalPrice(),
+                                mapGrpcPaymentRollbackStatusToDomain(result.getRollbackStatus())));
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable ex) {
+                completableFuture.completeExceptionally(ex);
+            }
+        }, MoreExecutors.directExecutor());
+
+        return completableFuture;
+    }
+
     public Mono<PaymentResponse> charge(final PaymentRequest domainPaymentRequest) {
         logger.info("Will try to charge " + domainPaymentRequest + " ...");
 
@@ -83,11 +119,11 @@ public class PaymentServiceGrpcClient implements PaymentService {
 
         final GrpcPaymentRequest grpcPaymentRequest = mapDomainPaymentRequestToGrpc(domainPaymentRequest);
 
-        ListenableFuture<GrpcPaymentResponse> grpcFuture = grpcStub
+        ListenableFuture<GrpcPaymentRollbackResponse> grpcFuture = grpcStub
                 .withDeadlineAfter(10, TimeUnit.SECONDS)
                 .rollback(grpcPaymentRequest);
 
-        return Mono.fromFuture(toCompletableFuture(grpcFuture));
+        return Mono.fromFuture(rollbackToCompletableFuture(grpcFuture));
     }
 
     private PaymentStatus mapGrpcPaymentStatusToDomain(final GrpcPaymentStatus grpcPaymentStatus) {
@@ -98,6 +134,19 @@ public class PaymentServiceGrpcClient implements PaymentService {
                 return PaymentStatus.PAYMENT_CANCELLED;
             default:
                 throw new IllegalArgumentException("Unknown Payment Status: " + grpcPaymentStatus);
+        }
+
+    }
+
+    private PaymentStatus mapGrpcPaymentRollbackStatusToDomain(
+            final GrpcPaymentRollbackStatus grpcPaymentRollbackStatus) {
+        switch (grpcPaymentRollbackStatus) {
+            case PAYMENT_ROLLBACK_COMPLETED:
+                return PaymentStatus.PAYMENT_COMPLETED;
+            case PAYMENT_ROLLBACK_FAILED:
+                return PaymentStatus.PAYMENT_CANCELLED;
+            default:
+                throw new IllegalArgumentException("Unknown Payment Status: " + grpcPaymentRollbackStatus);
         }
 
     }

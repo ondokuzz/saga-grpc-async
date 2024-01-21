@@ -1,8 +1,8 @@
-package com.demirsoft.grpc.Inventory;
+package com.demirsoft.micro1.payment.grpc;
 
 service GrpcInventoryService {
     rpc drop(GrpcInventoryRequest) returns (GrpcInventoryResponse) {}
-    rpc rollback(GrpcInventoryRequest) returns (GrpcInventoryResponse) {}
+    rpc rollback(GrpcInventoryRequest) returns (GrpcInventoryRollbackResponse) {}
   }
   
   message GrpcInventoryRequest {
@@ -17,12 +17,25 @@ service GrpcInventoryService {
     UNAVAILABLE = 2;
   }
 
+  enum GrpcInventoryRollbackStatus {
+    INVENTORY_ROLLBACK_COMPLETED = 1;
+    INVENTORY_ROLLBACK_FAILED = 2;
+  }
+
   message GrpcInventoryResponse{
     required int32 orderId = 1;
     required int32 userId = 2;
     required int32 productId = 3;
     required int32 productCount = 4;
     required GrpcInventoryStatus inventoryStatus = 5;
+  }
+
+  message GrpcInventoryRollbackResponse{
+    required int32 orderId = 1;
+    required int32 userId = 2;
+    required int32 productId = 3;
+    required int32 productCount = 4;
+    required GrpcInventoryRollbackStatus rollbackStatus = 5;
   }
 
   

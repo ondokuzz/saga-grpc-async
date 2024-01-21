@@ -1,8 +1,5 @@
 package com.demirsoft.apiservice.api.services.inventory;
 
-import java.time.Duration;
-
-import com.demirsoft.apiservice.api.grpc.InventoryServiceGrpcClient;
 import com.demirsoft.apiservice.api.saga.SagaTask;
 
 import reactor.core.publisher.Mono;
