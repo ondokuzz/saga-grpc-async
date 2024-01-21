@@ -19,7 +19,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import io.grpc.stub.StreamObserver;
 import reactor.core.publisher.Mono;
 
 public class GreeterGrpcClient {
@@ -29,30 +28,6 @@ public class GreeterGrpcClient {
 
     public GreeterGrpcClient(GreeterFutureStub grpcStub) {
         this.grpcStub = grpcStub;
-    }
-
-    private StreamObserver<HelloReply> processHelloResponseAsync() {
-        return new StreamObserver<HelloReply>() {
-
-            @Override
-            public void onNext(HelloReply response) {
-                logger.info("Greeting received from server: " + response.getMessage());
-                // received.add(new Site(response.getMessage(),
-                // Date.from(ZonedDateTime.now().toInstant())));
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                logger.info("Greeting received error from server {0}", t.getMessage());
-            }
-
-            @Override
-            public synchronized void onCompleted() {
-                logger.info("Greeting stream completed");
-                this.notify();
-            }
-
-        };
     }
 
     public CompletableFuture<Site> toCompletableFuture(@Nonnull ListenableFuture<HelloReply> listenableFuture) {

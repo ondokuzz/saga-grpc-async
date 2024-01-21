@@ -18,12 +18,6 @@ public class GreeterGrpcServer extends GreeterGrpc.GreeterImplBase {
     public void sayHello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
         logger.debug("sayHello called with {}", req.getName());
 
-        try {
-            TimeUnit.SECONDS.sleep(15);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
         HelloReply reply = HelloReply.newBuilder().setMessage("Hello " + req.getName()).build();
         responseObserver.onNext(reply);
         responseObserver.onCompleted();

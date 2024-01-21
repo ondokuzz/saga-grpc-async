@@ -1,0 +1,28 @@
+package com.demirsoft.grpc.payment;
+
+service GrpcPaymentService {
+    rpc charge(GrpcPaymentRequest) returns (GrpcPaymentResponse) {}
+    rpc rollback(GrpcPaymentRequest) returns (GrpcPaymentResponse) {}
+  }
+  
+  message GrpcPaymentRequest {
+    required int32 orderId = 1;
+    required int32 userId = 2;
+    required int32 productId = 3;
+    required int32 productCount = 4;
+    required double price = 5;
+  }
+  
+  enum GrpcPaymentStatus {
+    PAYMENT_COMPLETED = 1;
+    PAYMENT_CANCELLED = 2;
+  }
+
+  message GrpcPaymentResponse {
+    required int32 orderId = 1;
+    required int32 userId = 2;
+    required int32 productId = 3;
+    required int32 productCount = 4;
+    required double totalPrice = 5;
+    required GrpcPaymentStatus paymentStatus = 6;
+  }

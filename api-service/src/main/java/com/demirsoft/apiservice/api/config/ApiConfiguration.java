@@ -17,11 +17,21 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.lang.NonNull;
 
 import com.demirsoft.apiservice.api.grpc.GreeterGrpcClient;
+import com.demirsoft.apiservice.api.grpc.InventoryServiceGrpcClient;
+import com.demirsoft.apiservice.api.grpc.PaymentServiceGrpcClient;
 import com.demirsoft.apiservice.api.model.Site;
+import com.demirsoft.apiservice.api.services.inventory.InventoryService;
+import com.demirsoft.apiservice.api.services.order.OrderService;
+import com.demirsoft.apiservice.api.services.order.OrderServiceImpl;
+import com.demirsoft.apiservice.api.services.payment.PaymentService;
 import com.demirsoft.greeter.GreeterGrpc;
 import com.demirsoft.greeter.GreeterGrpc.GreeterBlockingStub;
 import com.demirsoft.greeter.GreeterGrpc.GreeterFutureStub;
 import com.demirsoft.greeter.GreeterGrpc.GreeterStub;
+import com.demirsoft.grpc.Inventory.GrpcInventoryServiceGrpc;
+import com.demirsoft.grpc.Inventory.GrpcInventoryServiceGrpc.GrpcInventoryServiceFutureStub;
+import com.demirsoft.grpc.payment.GrpcPaymentServiceGrpc;
+import com.demirsoft.grpc.payment.GrpcPaymentServiceGrpc.GrpcPaymentServiceFutureStub;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -83,5 +93,35 @@ public class ApiConfiguration {
     GreeterGrpcClient createGrpcClient(GreeterFutureStub greeterStub) {
         logger.info("creating grpc client");
         return new GreeterGrpcClient(greeterStub);
+    }
+
+    @Bean
+    GrpcPaymentServiceFutureStub createPaymentFutureStub(ManagedChannel channel) {
+        return GrpcPaymentServiceGrpc.newFutureStub(channel);
+
+    }
+
+    @Bean
+    GrpcInventoryServiceFutureStub createInventoryFutureStub(ManagedChannel channel) {
+        return GrpcInventoryServiceGrpc.newFutureStub(channel);
+
+    }
+
+    @Bean
+    PaymentService createPaymentService(GrpcPaymentServiceFutureStub paymentGrpcStub) {
+        logger.info("creating payment grpc client");
+        return new PaymentServiceGrpcClient(paymentGrpcStub);
+    }
+
+    @Bean
+    InventoryService createInventoryService(GrpcInventoryServiceFutureStub inventoryGrpcStub) {
+        logger.info("creating inventory grpc client");
+        return new InventoryServiceGrpcClient(inventoryGrpcStub);
+    }
+
+    @Bean
+    OrderService createOrderService(PaymentService paymentService, InventoryService inventoryService) {
+        logger.info("creating OrderServiceImpl");
+        return new OrderServiceImpl(paymentService, inventoryService);
     }
 }
