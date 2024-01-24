@@ -3,6 +3,9 @@ package com.demirsoft.apiservice.api.services.order;
 import com.demirsoft.apiservice.api.services.inventory.InventoryStatus;
 import com.demirsoft.apiservice.api.services.payment.PaymentStatus;
 
+import lombok.Getter;
+
+@Getter
 public class OrderStatus {
     public enum OrderStatusCode {
         ORDER_COMPLETED,

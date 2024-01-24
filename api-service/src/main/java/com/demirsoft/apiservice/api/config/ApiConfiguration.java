@@ -1,7 +1,5 @@
 package com.demirsoft.apiservice.api.config;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -20,10 +18,11 @@ import com.demirsoft.micro1.payment.grpc.GrpcPaymentServiceGrpc.GrpcPaymentServi
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import lombok.extern.log4j.Log4j2;
 
 @Configuration
+@Log4j2
 public class ApiConfiguration {
-    private final Logger logger = LogManager.getLogger(getClass());
 
     @Autowired
     private PaymentServiceProperties paymentServiceProperties;
@@ -34,27 +33,23 @@ public class ApiConfiguration {
     @Bean
     @Qualifier("Payment")
     ManagedChannel createPaymentGrpcChannel() {
-        logger.info("creating payment grpc channel for {} {}", paymentServiceProperties.getGrpcServerHost(),
-                paymentServiceProperties.getGrpcServerPort());
+        String host = paymentServiceProperties.getGrpcServerHost();
+        Integer port = paymentServiceProperties.getGrpcServerPort();
 
-        return ManagedChannelBuilder
-                .forAddress(paymentServiceProperties.getGrpcServerHost(), paymentServiceProperties.getGrpcServerPort())
-                .usePlaintext()
-                .build();
+        log.info("creating payment grpc channel for {} {}", host, port);
+
+        return createGrpcChannel(host, port);
     }
 
     @Bean
     @Qualifier("Inventory")
     ManagedChannel createInventoryGrpcChannel() {
-        logger.info("creating inventory grpc channel for {} {}",
-                inventoryServiceProperties.getGrpcServerHost(),
-                inventoryServiceProperties.getGrpcServerPort());
+        String host = inventoryServiceProperties.getGrpcServerHost();
+        Integer port = inventoryServiceProperties.getGrpcServerPort();
 
-        return ManagedChannelBuilder
-                .forAddress(inventoryServiceProperties.getGrpcServerHost(),
-                        inventoryServiceProperties.getGrpcServerPort())
-                .usePlaintext()
-                .build();
+        log.info("creating inventory grpc channel for {} {}", host, port);
+
+        return createGrpcChannel(host, port);
     }
 
     @Bean
@@ -70,20 +65,28 @@ public class ApiConfiguration {
     }
 
     @Bean
-    PaymentService createPaymentService(GrpcPaymentServiceFutureStub paymentGrpcStub) {
-        logger.info("creating payment grpc client");
-        return new PaymentServiceGrpcClient(paymentGrpcStub);
+    PaymentService createPaymentService(
+            GrpcPaymentServiceFutureStub paymentGrpcStub,
+            PaymentServiceProperties paymentServiceProperties) {
+        log.info("creating payment grpc client");
+        return new PaymentServiceGrpcClient(paymentGrpcStub, paymentServiceProperties);
     }
 
     @Bean
-    InventoryService createInventoryService(GrpcInventoryServiceFutureStub inventoryGrpcStub) {
-        logger.info("creating inventory grpc client");
-        return new InventoryServiceGrpcClient(inventoryGrpcStub);
+    InventoryService createInventoryService(
+            GrpcInventoryServiceFutureStub inventoryGrpcStub,
+            InventoryServiceProperties inventoryServiceProperties) {
+        log.info("creating inventory grpc client");
+        return new InventoryServiceGrpcClient(inventoryGrpcStub, inventoryServiceProperties);
     }
 
     @Bean
     OrderService createOrderService(PaymentService paymentService, InventoryService inventoryService) {
-        logger.info("creating OrderServiceImpl");
+        log.info("creating OrderService");
         return new OrderServiceImpl(paymentService, inventoryService);
+    }
+
+    private ManagedChannel createGrpcChannel(String host, Integer port) {
+        return ManagedChannelBuilder.forAddress(host, port).usePlaintext().defaultLoadBalancingPolicy("").build();
     }
 }

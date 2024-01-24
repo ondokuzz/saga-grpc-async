@@ -1,5 +1,7 @@
 package com.demirsoft.apiservice.api.saga;
 
+import java.time.Duration;
+
 import reactor.core.publisher.Mono;
 
 public interface SagaTask<Response> {
@@ -7,5 +9,5 @@ public interface SagaTask<Response> {
 
     Mono<Response> rollback();
 
-    void timeout();
+    Duration timeout();
 }

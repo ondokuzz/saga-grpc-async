@@ -1,6 +1,5 @@
 package com.demirsoft.apiservice;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -64,8 +63,7 @@ public class SagaTransactionTest<T> {
         var inventoryTask = new InventoryTask(inventoryServiceGrpcClient, inventoryRequest);
 
         SagaTransaction transaction = new SagaTransaction(
-                List.of(inventoryTask, paymentTask),
-                Duration.ofSeconds(10));
+                List.of(inventoryTask, paymentTask));
 
         transaction.execute().subscribe(taskResponses -> {
             System.out.println(taskResponses);

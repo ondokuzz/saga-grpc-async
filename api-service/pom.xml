@@ -13,7 +13,7 @@
 	<artifactId>api-service</artifactId>
 	<version>0.0.4-SNAPSHOT</version>
 	<name>api-service</name>
-	<description>Demo project for Spring Boot</description>
+	<description>Api Service</description>
 	<properties>
 		<java.version>17</java.version>
 		<spring-cloud.version>2022.0.4</spring-cloud.version>
@@ -22,22 +22,8 @@
 	</properties>
 	<dependencies>
 		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-openfeign</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
-		</dependency>
-
-		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 
@@ -83,6 +69,14 @@
 		<artifactId>spring-boot-starter-webflux</artifactId>
 		<version>3.1.2</version>
 	</dependency>
+
+	<!-- lombok -->
+	<dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>1.18.30</version>
+        <scope>provided</scope>
+    </dependency>
 
 	</dependencies>
 	<dependencyManagement>

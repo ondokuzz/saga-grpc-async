@@ -1,6 +1,6 @@
 package com.demirsoft.apiservice.api.saga;
 
-import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -8,29 +8,28 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 public class SagaTransaction {
-    private final List<SagaTask<?>> tasks;
-    private final Duration timeout;
+    private static final int MAX_RETRY = 3;
+    private final List<SagaTask<? extends TaskResponse>> tasks;
 
-    public SagaTransaction(List<SagaTask<?>> tasks, Duration timeout) {
+    public SagaTransaction(List<SagaTask<? extends TaskResponse>> tasks) {
         this.tasks = tasks;
-        this.timeout = timeout;
     }
 
-    private <T> Mono<T> performOrRollbackTask(SagaTask<T> task) {
+    private <T extends TaskResponse> Mono<T> performOrRollbackTask(SagaTask<T> task) {
         return Mono.defer(() -> task.perform()
                 .log()
-                .retryWhen(Retry.backoff(3, timeout))
+                .retryWhen(Retry.backoff(MAX_RETRY, task.timeout()))
                 .onErrorResume(ex -> rollbackTask(task)));
     }
 
-    private <T> Mono<T> rollbackTask(SagaTask<T> task) {
+    private <T extends TaskResponse> Mono<T> rollbackTask(SagaTask<T> task) {
         return task.rollback()
                 .log()
-                .retryWhen(Retry.backoff(3, timeout))
+                .retryWhen(Retry.backoff(MAX_RETRY, task.timeout()))
                 .doOnError(ex -> System.out.println("log to dead letter queue: " + task + ": " + ex.getMessage()));
     }
 
-    public Mono<Object[]> execute() {
+    public Mono<TaskResponse[]> execute() {
         return Mono.zipDelayError(
                 tasks.stream()
                         .peek(t -> System.out.println("stream task:" + t))
@@ -38,7 +37,7 @@ public class SagaTransaction {
                         .peek(m -> System.out.println("stream mono:" + m))
                         .collect(Collectors.toList()),
                 results -> {
-                    return results;
+                    return Arrays.asList(results).stream().toArray(TaskResponse[]::new);
                 });
     }
 

@@ -1,13 +1,10 @@
 package com.demirsoft.apiservice.api.grpc;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import com.demirsoft.apiservice.api.config.InventoryServiceProperties;
 import com.demirsoft.apiservice.api.services.inventory.InventoryRequest;
 import com.demirsoft.apiservice.api.services.inventory.InventoryResponse;
 import com.demirsoft.apiservice.api.services.inventory.InventoryService;
@@ -18,108 +15,93 @@ import com.demirsoft.micro1.payment.grpc.InventoryService.GrpcInventoryResponse;
 import com.demirsoft.micro1.payment.grpc.InventoryService.GrpcInventoryRollbackResponse;
 import com.demirsoft.micro1.payment.grpc.InventoryService.GrpcInventoryRollbackStatus;
 import com.demirsoft.micro1.payment.grpc.InventoryService.GrpcInventoryStatus;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 
+import lombok.extern.log4j.Log4j2;
 import reactor.core.publisher.Mono;
 
+@Log4j2
 public class InventoryServiceGrpcClient implements InventoryService {
-    private final Logger logger = LogManager.getLogger(getClass());
+    private final GrpcInventoryServiceFutureStub grpcStub;
+    private final InventoryServiceProperties inventoryServiceProperties;
 
-    private GrpcInventoryServiceFutureStub grpcStub;
+    public InventoryServiceGrpcClient(
+            final GrpcInventoryServiceFutureStub grpcStub,
+            final InventoryServiceProperties inventoryServiceProperties) {
 
-    public InventoryServiceGrpcClient(GrpcInventoryServiceFutureStub grpcStub) {
         this.grpcStub = grpcStub;
+        this.inventoryServiceProperties = inventoryServiceProperties;
     }
 
-    public CompletableFuture<InventoryResponse> toCompletableFuture(
-            @Nonnull ListenableFuture<GrpcInventoryResponse> listenableFuture) {
-        CompletableFuture<InventoryResponse> completableFuture = new CompletableFuture<InventoryResponse>() {
-            @Override
-            public boolean cancel(boolean mayInterruptIfRunning) {
-                boolean cancelled = listenableFuture.cancel(mayInterruptIfRunning);
-                super.cancel(cancelled);
-                return cancelled;
-            }
-        };
+    public Mono<InventoryResponse> drop(@Nonnull final InventoryRequest domainInventoryRequest) {
+        log.info("Will try to drop " + domainInventoryRequest + " ...");
 
-        Futures.addCallback(listenableFuture, new FutureCallback<GrpcInventoryResponse>() {
-            @Override
-            public void onSuccess(@Nonnull GrpcInventoryResponse result) {
-                completableFuture
-                        .complete(new InventoryResponse(
-                                result.getOrderId(),
-                                result.getUserId(),
-                                result.getProductId(),
-                                result.getProductCount(),
-                                mapGrpcInventoryStatusToDomain(result.getInventoryStatus())));
-            }
+        GrpcInventoryRequest grpcInventoryRequest = mapDomainInventoryRequestToGrpc(domainInventoryRequest);
 
-            @Override
-            public void onFailure(@Nonnull Throwable ex) {
-                completableFuture.completeExceptionally(ex);
-            }
-        }, MoreExecutors.directExecutor());
+        ListenableFuture<GrpcInventoryResponse> grpcDropFuture = grpcDrop(grpcInventoryRequest);
 
-        return completableFuture;
+        return grpcDropResponseToMono(grpcDropFuture);
     }
 
-    public CompletableFuture<InventoryResponse> rollbackToCompletableFuture(
-            @Nonnull ListenableFuture<GrpcInventoryRollbackResponse> listenableFuture) {
-        CompletableFuture<InventoryResponse> completableFuture = new CompletableFuture<InventoryResponse>() {
-            @Override
-            public boolean cancel(boolean mayInterruptIfRunning) {
-                boolean cancelled = listenableFuture.cancel(mayInterruptIfRunning);
-                super.cancel(cancelled);
-                return cancelled;
-            }
-        };
+    public Mono<InventoryResponse> rollback(@Nonnull final InventoryRequest domainInventoryRequest) {
+        log.info("Will try to rollback " + domainInventoryRequest + " ...");
 
-        Futures.addCallback(listenableFuture, new FutureCallback<GrpcInventoryRollbackResponse>() {
-            @Override
-            public void onSuccess(@Nonnull GrpcInventoryRollbackResponse result) {
-                completableFuture
-                        .complete(new InventoryResponse(
-                                result.getOrderId(),
-                                result.getUserId(),
-                                result.getProductId(),
-                                result.getProductCount(),
-                                mapGrpcInventoryRollbackStatusToDomain(result.getRollbackStatus())));
-            }
+        GrpcInventoryRequest grpcInventoryRequest = mapDomainInventoryRequestToGrpc(domainInventoryRequest);
 
-            @Override
-            public void onFailure(@Nonnull Throwable ex) {
-                completableFuture.completeExceptionally(ex);
-            }
-        }, MoreExecutors.directExecutor());
+        ListenableFuture<GrpcInventoryRollbackResponse> grpcRollbackFuture = grpcRollback(grpcInventoryRequest);
 
-        return completableFuture;
+        return grpcRollbackResponseToMono(grpcRollbackFuture);
     }
 
-    public Mono<InventoryResponse> drop(final InventoryRequest domainInventoryRequest) {
-        logger.info("Will try to drop " + domainInventoryRequest + " ...");
+    private GrpcInventoryRequest mapDomainInventoryRequestToGrpc(
+            final InventoryRequest domainInventoryRequest) {
+        return GrpcInventoryRequest.newBuilder()
+                .setOrderId(domainInventoryRequest.orderId())
+                .setUserId(domainInventoryRequest.userId())
+                .setProductId(domainInventoryRequest.productId())
+                .setProductCount(domainInventoryRequest.productCount())
+                .build();
+    }
 
-        final GrpcInventoryRequest grpcInventoryRequest = mapDomainInventoryRequestToGrpc(domainInventoryRequest);
-
-        ListenableFuture<GrpcInventoryResponse> grpcFuture = grpcStub
-                .withDeadlineAfter(10, TimeUnit.SECONDS)
+    private ListenableFuture<GrpcInventoryResponse> grpcDrop(final GrpcInventoryRequest grpcInventoryRequest) {
+        return grpcStub
+                .withDeadlineAfter(inventoryServiceProperties.getGrpcDeadline(), TimeUnit.SECONDS)
                 .drop(grpcInventoryRequest);
-
-        return Mono.fromFuture(toCompletableFuture(grpcFuture));
     }
 
-    public Mono<InventoryResponse> rollback(final InventoryRequest domainInventoryRequest) {
-        logger.info("Will try to rollback " + domainInventoryRequest + " ...");
-
-        final GrpcInventoryRequest grpcInventoryRequest = mapDomainInventoryRequestToGrpc(domainInventoryRequest);
-
-        ListenableFuture<GrpcInventoryRollbackResponse> grpcFuture = grpcStub
-                .withDeadlineAfter(10, TimeUnit.SECONDS)
+    private ListenableFuture<GrpcInventoryRollbackResponse> grpcRollback(
+            final GrpcInventoryRequest grpcInventoryRequest) {
+        return grpcStub
+                .withDeadlineAfter(inventoryServiceProperties.getGrpcDeadline(), TimeUnit.SECONDS)
                 .rollback(grpcInventoryRequest);
+    }
 
-        return Mono.fromFuture(rollbackToCompletableFuture(grpcFuture));
+    private Mono<InventoryResponse> grpcDropResponseToMono(
+            @Nonnull final ListenableFuture<GrpcInventoryResponse> listenableFuture) {
+
+        var completableFuture = ListenableToCompletable.convert(listenableFuture,
+                (grpcDropResponse) -> new InventoryResponse(
+                        grpcDropResponse.getOrderId(),
+                        grpcDropResponse.getUserId(),
+                        grpcDropResponse.getProductId(),
+                        grpcDropResponse.getProductCount(),
+                        mapGrpcInventoryStatusToDomain(grpcDropResponse.getInventoryStatus())));
+
+        return Mono.fromFuture(completableFuture);
+    }
+
+    private Mono<InventoryResponse> grpcRollbackResponseToMono(
+            @Nonnull final ListenableFuture<GrpcInventoryRollbackResponse> listenableFuture) {
+
+        var completableFuture = ListenableToCompletable.convert(listenableFuture,
+                (grpcRollbackResponse) -> new InventoryResponse(
+                        grpcRollbackResponse.getOrderId(),
+                        grpcRollbackResponse.getUserId(),
+                        grpcRollbackResponse.getProductId(),
+                        grpcRollbackResponse.getProductCount(),
+                        mapGrpcInventoryRollbackStatusToDomain(grpcRollbackResponse.getRollbackStatus())));
+
+        return Mono.fromFuture(completableFuture);
     }
 
     private InventoryStatus mapGrpcInventoryStatusToDomain(final GrpcInventoryStatus grpcInventoryStatus) {
@@ -131,7 +113,6 @@ public class InventoryServiceGrpcClient implements InventoryService {
             default:
                 throw new IllegalArgumentException("Unknown Inventory Status: " + grpcInventoryStatus);
         }
-
     }
 
     private InventoryStatus mapGrpcInventoryRollbackStatusToDomain(
@@ -142,17 +123,8 @@ public class InventoryServiceGrpcClient implements InventoryService {
             case INVENTORY_ROLLBACK_FAILED:
                 return InventoryStatus.UNAVAILABLE;
             default:
-                throw new IllegalArgumentException("Unknown Inventory Status: " + grpcInventoryRollbackStatus);
+                throw new IllegalArgumentException("Unknown Inventory Rollback Status: " + grpcInventoryRollbackStatus);
         }
-
     }
 
-    private GrpcInventoryRequest mapDomainInventoryRequestToGrpc(final InventoryRequest domainInventoryRequest) {
-        return GrpcInventoryRequest.newBuilder()
-                .setOrderId(domainInventoryRequest.orderId())
-                .setUserId(domainInventoryRequest.userId())
-                .setProductId(domainInventoryRequest.productId())
-                .setProductCount(domainInventoryRequest.productCount())
-                .build();
-    }
 }

@@ -1,10 +1,15 @@
 package com.demirsoft.apiservice.api.services.payment;
 
+import java.time.Duration;
+
 import com.demirsoft.apiservice.api.saga.SagaTask;
 
+import lombok.extern.log4j.Log4j2;
 import reactor.core.publisher.Mono;
 
+@Log4j2
 public class PaymentTask implements SagaTask<PaymentResponse> {
+    private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
     private final PaymentService paymentService;
     private final PaymentRequest paymentRequest;
@@ -16,19 +21,20 @@ public class PaymentTask implements SagaTask<PaymentResponse> {
 
     @Override
     public Mono<PaymentResponse> perform() {
-        System.out.println("perform: payment task");
+        log.debug("perform: payment task");
         return this.paymentService.charge(paymentRequest);
     }
 
     @Override
     public Mono<PaymentResponse> rollback() {
-        System.out.println("rollback: payment task");
+        log.debug("rollback: payment task");
         return this.paymentService.rollback(paymentRequest);
 
     }
 
     @Override
-    public void timeout() {
+    public Duration timeout() {
+        return TIMEOUT;
     }
 
 }

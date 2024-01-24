@@ -2,7 +2,6 @@ package com.demirsoft.apiservice.api.config;
 
 import java.util.concurrent.ExecutionException;
 
-import org.apache.kafka.common.errors.TimeoutException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -21,9 +20,4 @@ public class ApiControllerExceptionHandler {
         return new ResponseEntity<String>("request execution exception", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler(TimeoutException.class)
-    public ResponseEntity<String> handleTimeoutExceptions() {
-        System.out.print("request timed out");
-        return new ResponseEntity<String>("request timed out", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
 }

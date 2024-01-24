@@ -5,9 +5,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import com.demirsoft.apiservice.api.config.PaymentServiceProperties;
 import com.demirsoft.apiservice.api.services.payment.PaymentRequest;
 import com.demirsoft.apiservice.api.services.payment.PaymentResponse;
 import com.demirsoft.apiservice.api.services.payment.PaymentService;
@@ -23,107 +21,91 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import lombok.extern.log4j.Log4j2;
 import reactor.core.publisher.Mono;
 
+@Log4j2
 public class PaymentServiceGrpcClient implements PaymentService {
-    private final Logger logger = LogManager.getLogger(getClass());
 
-    private GrpcPaymentServiceFutureStub grpcStub;
+    private final GrpcPaymentServiceFutureStub grpcStub;
+    private final PaymentServiceProperties paymentServiceProperties;
 
-    public PaymentServiceGrpcClient(GrpcPaymentServiceFutureStub grpcStub) {
+    public PaymentServiceGrpcClient(GrpcPaymentServiceFutureStub grpcStub,
+            PaymentServiceProperties paymentServiceProperties) {
         this.grpcStub = grpcStub;
-    }
-
-    public CompletableFuture<PaymentResponse> toCompletableFuture(
-            @Nonnull ListenableFuture<GrpcPaymentResponse> listenableFuture) {
-
-        CompletableFuture<PaymentResponse> completableFuture = new CompletableFuture<PaymentResponse>() {
-            @Override
-            public boolean cancel(boolean mayInterruptIfRunning) {
-                boolean cancelled = listenableFuture.cancel(mayInterruptIfRunning);
-                super.cancel(cancelled);
-                return cancelled;
-            }
-        };
-
-        Futures.addCallback(listenableFuture, new FutureCallback<GrpcPaymentResponse>() {
-            @Override
-            public void onSuccess(@Nonnull GrpcPaymentResponse result) {
-                completableFuture
-                        .complete(new PaymentResponse(
-                                result.getOrderId(),
-                                result.getUserId(),
-                                result.getProductId(),
-                                result.getProductCount(),
-                                result.getTotalPrice(),
-                                mapGrpcPaymentStatusToDomain(result.getPaymentStatus())));
-            }
-
-            @Override
-            public void onFailure(@Nonnull Throwable ex) {
-                completableFuture.completeExceptionally(ex);
-            }
-        }, MoreExecutors.directExecutor());
-
-        return completableFuture;
-    }
-
-    public CompletableFuture<PaymentResponse> rollbackToCompletableFuture(
-            @Nonnull ListenableFuture<GrpcPaymentRollbackResponse> listenableFuture) {
-
-        CompletableFuture<PaymentResponse> completableFuture = new CompletableFuture<PaymentResponse>() {
-            @Override
-            public boolean cancel(boolean mayInterruptIfRunning) {
-                boolean cancelled = listenableFuture.cancel(mayInterruptIfRunning);
-                super.cancel(cancelled);
-                return cancelled;
-            }
-        };
-
-        Futures.addCallback(listenableFuture, new FutureCallback<GrpcPaymentRollbackResponse>() {
-            @Override
-            public void onSuccess(@Nonnull GrpcPaymentRollbackResponse result) {
-                completableFuture
-                        .complete(new PaymentResponse(
-                                result.getOrderId(),
-                                result.getUserId(),
-                                result.getProductId(),
-                                result.getProductCount(),
-                                result.getTotalPrice(),
-                                mapGrpcPaymentRollbackStatusToDomain(result.getRollbackStatus())));
-            }
-
-            @Override
-            public void onFailure(@Nonnull Throwable ex) {
-                completableFuture.completeExceptionally(ex);
-            }
-        }, MoreExecutors.directExecutor());
-
-        return completableFuture;
+        this.paymentServiceProperties = paymentServiceProperties;
     }
 
     public Mono<PaymentResponse> charge(final PaymentRequest domainPaymentRequest) {
-        logger.info("Will try to charge " + domainPaymentRequest + " ...");
+        log.info("Will try to charge " + domainPaymentRequest + " ...");
 
         final GrpcPaymentRequest grpcPaymentRequest = mapDomainPaymentRequestToGrpc(domainPaymentRequest);
 
-        ListenableFuture<GrpcPaymentResponse> grpcFuture = grpcStub
-                .withDeadlineAfter(10, TimeUnit.SECONDS)
-                .charge(grpcPaymentRequest);
+        ListenableFuture<GrpcPaymentResponse> grpcChargeFuture = grpcCharge(grpcPaymentRequest);
 
-        return Mono.fromFuture(toCompletableFuture(grpcFuture));
+        return grpcChargeResponseToMono(grpcChargeFuture);
     }
 
     public Mono<PaymentResponse> rollback(final PaymentRequest domainPaymentRequest) {
-        logger.info("Will try to rollback " + domainPaymentRequest + " ...");
+        log.info("Will try to rollback " + domainPaymentRequest + " ...");
 
         final GrpcPaymentRequest grpcPaymentRequest = mapDomainPaymentRequestToGrpc(domainPaymentRequest);
 
-        ListenableFuture<GrpcPaymentRollbackResponse> grpcFuture = grpcStub
-                .withDeadlineAfter(10, TimeUnit.SECONDS)
-                .rollback(grpcPaymentRequest);
+        ListenableFuture<GrpcPaymentRollbackResponse> grpcRollbackFuture = grpcRollback(grpcPaymentRequest);
 
-        return Mono.fromFuture(rollbackToCompletableFuture(grpcFuture));
+        return grpcRollbackResponseToMono(grpcRollbackFuture);
+    }
+
+    private GrpcPaymentRequest mapDomainPaymentRequestToGrpc(final PaymentRequest domainPaymentRequest) {
+        return GrpcPaymentRequest.newBuilder()
+                .setOrderId(domainPaymentRequest.orderId())
+                .setUserId(domainPaymentRequest.userId())
+                .setProductId(domainPaymentRequest.productId())
+                .setProductCount(domainPaymentRequest.productCount())
+                .setPrice(domainPaymentRequest.price())
+                .build();
+    }
+
+    private ListenableFuture<GrpcPaymentResponse> grpcCharge(final GrpcPaymentRequest grpcPaymentRequest) {
+        return grpcStub
+                .withDeadlineAfter(paymentServiceProperties.getGrpcDeadline(), TimeUnit.SECONDS)
+                .charge(grpcPaymentRequest);
+    }
+
+    private ListenableFuture<GrpcPaymentRollbackResponse> grpcRollback(final GrpcPaymentRequest grpcPaymentRequest) {
+        return grpcStub
+                .withDeadlineAfter(paymentServiceProperties.getGrpcDeadline(), TimeUnit.SECONDS)
+                .rollback(grpcPaymentRequest);
+    }
+
+    private Mono<PaymentResponse> grpcChargeResponseToMono(
+            @Nonnull final ListenableFuture<GrpcPaymentResponse> listenableFuture) {
+
+        var completableFuture = ListenableToCompletable.convert(listenableFuture,
+                (grpcChargeResponse) -> new PaymentResponse(
+                        grpcChargeResponse.getOrderId(),
+                        grpcChargeResponse.getUserId(),
+                        grpcChargeResponse.getProductId(),
+                        grpcChargeResponse.getProductCount(),
+                        grpcChargeResponse.getTotalPrice(),
+                        mapGrpcPaymentStatusToDomain(grpcChargeResponse.getPaymentStatus())));
+
+        return Mono.fromFuture(completableFuture);
+    }
+
+    private Mono<PaymentResponse> grpcRollbackResponseToMono(
+            @Nonnull final ListenableFuture<GrpcPaymentRollbackResponse> listenableFuture) {
+
+        var completableFuture = ListenableToCompletable.convert(listenableFuture,
+                (grpcRollbackResponse) -> new PaymentResponse(
+                        grpcRollbackResponse.getOrderId(),
+                        grpcRollbackResponse.getUserId(),
+                        grpcRollbackResponse.getProductId(),
+                        grpcRollbackResponse.getProductCount(),
+                        grpcRollbackResponse.getTotalPrice(),
+                        mapGrpcPaymentRollbackStatusToDomain(grpcRollbackResponse.getRollbackStatus())));
+
+        return Mono.fromFuture(completableFuture);
     }
 
     private PaymentStatus mapGrpcPaymentStatusToDomain(final GrpcPaymentStatus grpcPaymentStatus) {
@@ -135,7 +117,6 @@ public class PaymentServiceGrpcClient implements PaymentService {
             default:
                 throw new IllegalArgumentException("Unknown Payment Status: " + grpcPaymentStatus);
         }
-
     }
 
     private PaymentStatus mapGrpcPaymentRollbackStatusToDomain(
@@ -148,16 +129,5 @@ public class PaymentServiceGrpcClient implements PaymentService {
             default:
                 throw new IllegalArgumentException("Unknown Payment Status: " + grpcPaymentRollbackStatus);
         }
-
-    }
-
-    private GrpcPaymentRequest mapDomainPaymentRequestToGrpc(final PaymentRequest domainPaymentRequest) {
-        return GrpcPaymentRequest.newBuilder()
-                .setOrderId(domainPaymentRequest.orderId())
-                .setUserId(domainPaymentRequest.userId())
-                .setProductId(domainPaymentRequest.productId())
-                .setProductCount(domainPaymentRequest.productCount())
-                .setPrice(domainPaymentRequest.price())
-                .build();
     }
 }
