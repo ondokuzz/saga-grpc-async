@@ -1,6 +1,10 @@
 # saga-grpc-async
 - 3 micro service
   - 1 api, 1 controller, 1 postgre, 1 redis, 1 kafka
+  order -> payment -> stock -> delivery
+  persist each task to atomic saga log
+  a service will read and perform events from the saga log
+
 - each controller auto scale according to active request count
 - kafka cluster
 - redis cluster
@@ -35,8 +39,11 @@
 - load balancing mechanisms
 - delete unnecessary comments
 - Autowired'lari constructor initialize'a cevir
+- use service names instead of ips (service discovery)
 - documentation
   - draw high level architecture
+  - define resillience mechannisms, grpc retry, linkerd
+  - implement swagger
   - folder structure: 
     project -> service1
             -> service2
