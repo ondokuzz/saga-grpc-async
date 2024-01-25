@@ -25,7 +25,7 @@ public class ApiController {
     @GetMapping("/orders")
     public Mono<String> getOrder() {
         log.debug("getting order: {}");
-        return Mono.just("Order");
+        return Mono.just("host name:" + System.getenv("HOSTNAME"));
     }
 
     @PostMapping("/orders")

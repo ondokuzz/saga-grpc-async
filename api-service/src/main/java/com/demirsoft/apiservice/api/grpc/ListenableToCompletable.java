@@ -13,7 +13,7 @@ import lombok.extern.log4j.Log4j2;
 import javax.annotation.Nonnull;
 
 @Log4j2
-public class ListenableToCompletable {
+final public class ListenableToCompletable {
 
     public static <G, D> CompletableFuture<D> convert(
             @Nonnull ListenableFuture<G> grpcListenableFuture,
@@ -64,7 +64,7 @@ public class ListenableToCompletable {
             @Override
             public void onFailure(@Nonnull Throwable ex) {
                 log.error("grpc exception occured: {} {} {}", ex.getCause(), ex.getMessage(), ex.toString());
-                // completableFuture.completeExceptionally(ex);
+                completableFuture.completeExceptionally(ex);
             }
         };
     }

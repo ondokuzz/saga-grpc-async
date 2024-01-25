@@ -32,7 +32,7 @@ public class ApiConfiguration {
 
     @Bean
     @Qualifier("Payment")
-    ManagedChannel createPaymentGrpcChannel() {
+    ManagedChannel createPaymentGrpcChannel(PaymentServiceProperties paymentServiceProperties) {
         String host = paymentServiceProperties.getGrpcServerHost();
         Integer port = paymentServiceProperties.getGrpcServerPort();
 
@@ -43,7 +43,7 @@ public class ApiConfiguration {
 
     @Bean
     @Qualifier("Inventory")
-    ManagedChannel createInventoryGrpcChannel() {
+    ManagedChannel createInventoryGrpcChannel(InventoryServiceProperties inventoryServiceProperties) {
         String host = inventoryServiceProperties.getGrpcServerHost();
         Integer port = inventoryServiceProperties.getGrpcServerPort();
 
@@ -87,6 +87,6 @@ public class ApiConfiguration {
     }
 
     private ManagedChannel createGrpcChannel(String host, Integer port) {
-        return ManagedChannelBuilder.forAddress(host, port).usePlaintext().defaultLoadBalancingPolicy("").build();
+        return ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
     }
 }

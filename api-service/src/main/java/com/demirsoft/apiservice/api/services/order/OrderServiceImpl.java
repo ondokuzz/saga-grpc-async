@@ -3,6 +3,7 @@ package com.demirsoft.apiservice.api.services.order;
 import java.util.Arrays;
 import java.util.List;
 
+import com.demirsoft.apiservice.api.saga.SagaTask;
 import com.demirsoft.apiservice.api.saga.SagaTransaction;
 import com.demirsoft.apiservice.api.saga.TaskResponse;
 import com.demirsoft.apiservice.api.services.inventory.InventoryRequest;
@@ -36,21 +37,17 @@ public class OrderServiceImpl implements OrderService {
         var inventoryRequest = createInventoryRequest(orderRequest);
         var inventoryTask = createInventoryTask(inventoryRequest);
 
-        Mono<TaskResponse[]> taskResponses = executeTasks(paymentTask, inventoryTask);
+        var taskList = List.<SagaTask<? extends TaskResponse>>of(paymentTask);
+        var taskResponses = executeTasks(taskList);
 
         return createCombinedResponse(orderRequest, taskResponses);
 
     }
 
-    private Mono<TaskResponse[]> executeTasks(PaymentTask paymentTask, InventoryTask inventoryTask) {
-        SagaTransaction transaction = createTransaction(paymentTask, inventoryTask);
+    private Mono<TaskResponse[]> executeTasks(List<SagaTask<? extends TaskResponse>> taskList) {
+        SagaTransaction transaction = new SagaTransaction(taskList);
 
         return transaction.execute();
-    }
-
-    private SagaTransaction createTransaction(PaymentTask paymentTask, InventoryTask inventoryTask) {
-        return new SagaTransaction(
-                List.of(paymentTask, inventoryTask));
     }
 
     private InventoryTask createInventoryTask(InventoryRequest inventoryRequest) {

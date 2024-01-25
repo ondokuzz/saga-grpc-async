@@ -38,7 +38,13 @@ public class InventoryServiceGrpcClient implements InventoryService {
 
         GrpcInventoryRequest grpcInventoryRequest = mapDomainInventoryRequestToGrpc(domainInventoryRequest);
 
-        ListenableFuture<GrpcInventoryResponse> grpcDropFuture = grpcDrop(grpcInventoryRequest);
+        ListenableFuture<GrpcInventoryResponse> grpcDropFuture;
+        try {
+            grpcDropFuture = callGrpcDrop(grpcInventoryRequest);
+        } catch (Exception e) {
+            log.debug("InventoryGrpc drop exception {} {}", e.getCause(), e.getMessage());
+            return Mono.error(e);
+        }
 
         return grpcDropResponseToMono(grpcDropFuture);
     }
@@ -48,7 +54,13 @@ public class InventoryServiceGrpcClient implements InventoryService {
 
         GrpcInventoryRequest grpcInventoryRequest = mapDomainInventoryRequestToGrpc(domainInventoryRequest);
 
-        ListenableFuture<GrpcInventoryRollbackResponse> grpcRollbackFuture = grpcRollback(grpcInventoryRequest);
+        ListenableFuture<GrpcInventoryRollbackResponse> grpcRollbackFuture;
+        try {
+            grpcRollbackFuture = callGrpcRollback(grpcInventoryRequest);
+        } catch (Exception e) {
+            log.debug("InventoryGrpc rollback exception {} {}", e.getCause(), e.getMessage());
+            return Mono.error(e);
+        }
 
         return grpcRollbackResponseToMono(grpcRollbackFuture);
     }
@@ -63,13 +75,13 @@ public class InventoryServiceGrpcClient implements InventoryService {
                 .build();
     }
 
-    private ListenableFuture<GrpcInventoryResponse> grpcDrop(final GrpcInventoryRequest grpcInventoryRequest) {
+    private ListenableFuture<GrpcInventoryResponse> callGrpcDrop(final GrpcInventoryRequest grpcInventoryRequest) {
         return grpcStub
                 .withDeadlineAfter(inventoryServiceProperties.getGrpcDeadline(), TimeUnit.SECONDS)
                 .drop(grpcInventoryRequest);
     }
 
-    private ListenableFuture<GrpcInventoryRollbackResponse> grpcRollback(
+    private ListenableFuture<GrpcInventoryRollbackResponse> callGrpcRollback(
             final GrpcInventoryRequest grpcInventoryRequest) {
         return grpcStub
                 .withDeadlineAfter(inventoryServiceProperties.getGrpcDeadline(), TimeUnit.SECONDS)
@@ -87,7 +99,10 @@ public class InventoryServiceGrpcClient implements InventoryService {
                         grpcDropResponse.getProductCount(),
                         mapGrpcInventoryStatusToDomain(grpcDropResponse.getInventoryStatus())));
 
-        return Mono.fromFuture(completableFuture);
+        return Mono.fromFuture(completableFuture)
+                .doOnError((ex) -> log.debug("grpcDropResponseToMono: consuming error {} {}", ex.getCause(),
+                        ex.getMessage()))
+                .onErrorComplete();
     }
 
     private Mono<InventoryResponse> grpcRollbackResponseToMono(
@@ -101,7 +116,11 @@ public class InventoryServiceGrpcClient implements InventoryService {
                         grpcRollbackResponse.getProductCount(),
                         mapGrpcInventoryRollbackStatusToDomain(grpcRollbackResponse.getRollbackStatus())));
 
-        return Mono.fromFuture(completableFuture);
+        return Mono.fromFuture(completableFuture)
+                .doOnError((ex) -> log.debug("grpcRollbackResponseToMono: consuming error {} {}",
+                        ex.getCause(),
+                        ex.getMessage()))
+                .onErrorComplete();
     }
 
     private InventoryStatus mapGrpcInventoryStatusToDomain(final GrpcInventoryStatus grpcInventoryStatus) {

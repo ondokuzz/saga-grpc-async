@@ -1,6 +1,5 @@
 package com.demirsoft.apiservice.api.grpc;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
@@ -16,10 +15,7 @@ import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentResponse;
 import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentRollbackResponse;
 import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentRollbackStatus;
 import com.demirsoft.micro1.payment.grpc.PaymentService.GrpcPaymentStatus;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import lombok.extern.log4j.Log4j2;
 import reactor.core.publisher.Mono;
@@ -41,7 +37,13 @@ public class PaymentServiceGrpcClient implements PaymentService {
 
         final GrpcPaymentRequest grpcPaymentRequest = mapDomainPaymentRequestToGrpc(domainPaymentRequest);
 
-        ListenableFuture<GrpcPaymentResponse> grpcChargeFuture = grpcCharge(grpcPaymentRequest);
+        ListenableFuture<GrpcPaymentResponse> grpcChargeFuture;
+        try {
+            grpcChargeFuture = grpcCharge(grpcPaymentRequest);
+        } catch (Exception e) {
+            log.debug("PaymentGrpc charge exception {} {}", e.getCause(), e.getMessage());
+            return Mono.error(e);
+        }
 
         return grpcChargeResponseToMono(grpcChargeFuture);
     }
@@ -51,7 +53,13 @@ public class PaymentServiceGrpcClient implements PaymentService {
 
         final GrpcPaymentRequest grpcPaymentRequest = mapDomainPaymentRequestToGrpc(domainPaymentRequest);
 
-        ListenableFuture<GrpcPaymentRollbackResponse> grpcRollbackFuture = grpcRollback(grpcPaymentRequest);
+        ListenableFuture<GrpcPaymentRollbackResponse> grpcRollbackFuture;
+        try {
+            grpcRollbackFuture = grpcRollback(grpcPaymentRequest);
+        } catch (Exception e) {
+            log.debug("PaymentGrpc rollback exception {} {}", e.getCause(), e.getMessage());
+            return Mono.error(e);
+        }
 
         return grpcRollbackResponseToMono(grpcRollbackFuture);
     }
