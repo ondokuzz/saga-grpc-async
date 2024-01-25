@@ -29,6 +29,8 @@
   for error state responses, the server might or might not rollback
 = implement a deadletter system for each microservice
 = implement using quarqus
+- max retries'i properties'den al
+- jsend return et
 
 # after implementation check, implement and document the following
 - unit tests
