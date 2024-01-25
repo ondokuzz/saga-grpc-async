@@ -31,6 +31,8 @@
 = implement using quarqus
 - max retries'i properties'den al
 - jsend return et
+- use springboot starter for @GrpcService @GrpcAdvice etc (yidongnan/grpc-spring-boot-starter)
+- add circuit breaker for grpc calls
 
 # after implementation check, implement and document the following
 - unit tests
