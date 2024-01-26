@@ -36,7 +36,7 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- grpc deps -->
+		<!-- grpc -->
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>

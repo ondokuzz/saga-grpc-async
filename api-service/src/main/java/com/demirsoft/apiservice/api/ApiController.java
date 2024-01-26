@@ -1,5 +1,8 @@
 package com.demirsoft.apiservice.api;
 
+import java.time.LocalTime;
+import java.util.Map;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,7 +28,13 @@ public class ApiController {
     @GetMapping("/orders")
     public Mono<String> getOrder() {
         log.debug("getting order: {}");
-        return Mono.just("host name:" + System.getenv("HOSTNAME"));
+        StringBuilder sb = new StringBuilder(LocalTime.now().toString());
+        Map<String, String> env = System.getenv();
+        for (String envName : env.keySet()) {
+            sb.append(String.format("<br>%s=%s%n</b>", envName, env.get(envName)));
+        }
+        return Mono.just("env:" + sb.toString());
+
     }
 
     @PostMapping("/orders")
