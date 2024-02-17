@@ -1,7 +1,11 @@
 # saga-grpc-async
 - 3 micro service
   - 1 api, 1 controller, 1 postgre, 1 redis, 1 kafka
-  order -> payment -> stock -> delivery
+  order -> async rest-> controller -> async grpc-> payment
+                                   -> async kafka-> delivery
+                                   -> async kafka-> e-mail
+                                   -> commit transaction info to db
+    
   persist each task to atomic saga log
   a service will read and perform events from the saga log
 
@@ -9,6 +13,7 @@
 - kafka cluster
 - redis cluster
 - spring, grpc, postgre, redis async
+- grpc, kafka, rest calls
 - grpc server host:port'u kubernetes service discovery'den al
 - grpc response client'ta islenemediyse, server'da da rollback
 - service1 grpc to service2 grpc to service3 (trace the call)
@@ -33,6 +38,7 @@
 - jsend return et
 - use springboot starter for @GrpcService @GrpcAdvice etc (yidongnan/grpc-spring-boot-starter)
 - add circuit breaker for grpc calls
+- implement tracing
 
 # after implementation check, implement and document the following
 - unit tests
