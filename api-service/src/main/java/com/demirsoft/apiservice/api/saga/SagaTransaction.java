@@ -15,14 +15,14 @@ public class SagaTransaction {
         this.tasks = tasks;
     }
 
-    private <T extends TaskResponse> Mono<T> performOrRollbackTask(SagaTask<T> task) {
+    private <T extends TaskResponse> Mono<T> taskPerformOrRollback(SagaTask<T> task) {
         return Mono.defer(() -> task.perform()
                 .log()
                 .retryWhen(Retry.backoff(MAX_RETRY, task.timeout()))
-                .onErrorResume(ex -> rollbackTask(task)));
+                .onErrorResume(ex -> taskRollback(task)));
     }
 
-    private <T extends TaskResponse> Mono<T> rollbackTask(SagaTask<T> task) {
+    private <T extends TaskResponse> Mono<T> taskRollback(SagaTask<T> task) {
         return task.rollback()
                 .log()
                 .retryWhen(Retry.backoff(MAX_RETRY, task.timeout()))
@@ -33,7 +33,7 @@ public class SagaTransaction {
         return Mono.zipDelayError(
                 tasks.stream()
                         .peek(t -> System.out.println("stream task:" + t))
-                        .map(task -> performOrRollbackTask(task))
+                        .map(task -> taskPerformOrRollback(task))
                         .peek(m -> System.out.println("stream mono:" + m))
                         .collect(Collectors.toList()),
                 results -> {

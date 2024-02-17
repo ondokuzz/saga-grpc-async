@@ -3,6 +3,8 @@ package com.demirsoft.apiservice.api.services.order;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import com.demirsoft.apiservice.api.saga.SagaTask;
 import com.demirsoft.apiservice.api.saga.SagaTransaction;
 import com.demirsoft.apiservice.api.saga.TaskResponse;
@@ -31,17 +33,28 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Mono<OrderResponse> createOrder(OrderRequest orderRequest) {
 
+        var inventoryRequest = createInventoryRequest(orderRequest);
+        if (!productAvailable(inventoryRequest))
+            return productUnavailableError(inventoryRequest);
+
         var paymentRequest = createPaymentRequest(orderRequest);
         var paymentTask = createPaymentTask(paymentRequest);
 
-        var inventoryRequest = createInventoryRequest(orderRequest);
         var inventoryTask = createInventoryTask(inventoryRequest);
 
-        var taskList = List.<SagaTask<? extends TaskResponse>>of(paymentTask);
+        var taskList = List.<SagaTask<? extends TaskResponse>>of(paymentTask, inventoryTask);
         var taskResponses = executeTasks(taskList);
 
         return createCombinedResponse(orderRequest, taskResponses);
 
+    }
+
+    private Mono<OrderResponse> productUnavailableError(InventoryRequest inventoryRequest) {
+        return Mono.error(
+                new IllegalArgumentException(
+                        String.format("product: %d for amount: %d not available",
+                                inventoryRequest.productId(),
+                                inventoryRequest.productCount())));
     }
 
     private Mono<TaskResponse[]> executeTasks(List<SagaTask<? extends TaskResponse>> taskList) {
@@ -50,14 +63,19 @@ public class OrderServiceImpl implements OrderService {
         return transaction.execute();
     }
 
-    private InventoryTask createInventoryTask(InventoryRequest inventoryRequest) {
+    private InventoryTask createInventoryTask(@Nonnull InventoryRequest inventoryRequest) {
         return new InventoryTask(this.inventoryService, inventoryRequest);
+    }
+
+    private Boolean productAvailable(@Nonnull InventoryRequest inventoryRequest) {
+        return inventoryService.isProductAvailable(inventoryRequest);
     }
 
     private PaymentTask createPaymentTask(PaymentRequest paymentRequest) {
         return new PaymentTask(this.paymentService, paymentRequest);
     }
 
+    @Nonnull
     private InventoryRequest createInventoryRequest(OrderRequest orderRequest) {
         return new InventoryRequest(
                 orderRequest.orderId(), orderRequest.userId(),

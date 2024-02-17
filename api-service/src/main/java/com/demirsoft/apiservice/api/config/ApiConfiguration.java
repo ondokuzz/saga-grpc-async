@@ -4,13 +4,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import com.demirsoft.apiservice.api.grpc.InventoryServiceGrpcClient;
 import com.demirsoft.apiservice.api.grpc.PaymentServiceGrpcClient;
 import com.demirsoft.apiservice.api.services.inventory.InventoryService;
+import com.demirsoft.apiservice.api.services.inventory.InventoryServiceImpl;
 import com.demirsoft.apiservice.api.services.order.OrderService;
 import com.demirsoft.apiservice.api.services.order.OrderServiceImpl;
 import com.demirsoft.apiservice.api.services.payment.PaymentService;
+import com.demirsoft.apiservice.api.services.payment.PaymentServiceImpl;
 import com.demirsoft.micro1.payment.grpc.GrpcInventoryServiceGrpc;
 import com.demirsoft.micro1.payment.grpc.GrpcInventoryServiceGrpc.GrpcInventoryServiceFutureStub;
 import com.demirsoft.micro1.payment.grpc.GrpcPaymentServiceGrpc;
@@ -65,7 +67,7 @@ public class ApiConfiguration {
     }
 
     @Bean
-    PaymentService createPaymentService(
+    PaymentServiceGrpcClient createGrpcPaymentService(
             GrpcPaymentServiceFutureStub paymentGrpcStub,
             PaymentServiceProperties paymentServiceProperties) {
         log.info("creating payment grpc client");
@@ -73,11 +75,26 @@ public class ApiConfiguration {
     }
 
     @Bean
-    InventoryService createInventoryService(
-            GrpcInventoryServiceFutureStub inventoryGrpcStub,
+    @Qualifier("InventoryService")
+    WebClient createWebClient(WebClient.Builder webClientBuilder,
             InventoryServiceProperties inventoryServiceProperties) {
+        return webClientBuilder.baseUrl(inventoryServiceProperties.getHostUrl()).build();
+    }
+
+    @Bean
+    PaymentService createPaymentService(
+            PaymentServiceGrpcClient paymentServiceGrpcClient,
+            PaymentServiceProperties paymentServiceProperties) {
+        log.info("creating payment grpc client");
+        return new PaymentServiceImpl(paymentServiceGrpcClient, paymentServiceProperties);
+    }
+
+    @Bean
+    InventoryService createInventoryService(
+            InventoryServiceProperties inventoryServiceProperties,
+            @Qualifier("InventoryService") WebClient webClient) {
         log.info("creating inventory grpc client");
-        return new InventoryServiceGrpcClient(inventoryGrpcStub, inventoryServiceProperties);
+        return new InventoryServiceImpl(inventoryServiceProperties, webClient);
     }
 
     @Bean

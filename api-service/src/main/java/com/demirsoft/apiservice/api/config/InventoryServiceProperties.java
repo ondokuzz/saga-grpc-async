@@ -24,4 +24,20 @@ public class InventoryServiceProperties {
     @Min(1)
     @Max(600)
     private Integer grpcDeadline;
+
+    @NotBlank
+    private String hostUrl;
+
+    @Min(0)
+    @Max(100)
+    private Integer retryCount;
+
+    @Min(0)
+    @Max(100)
+    private Integer retryPeriod;
+
+    @Min(0)
+    @Max(1)
+    private Double retryJitter;
+
 }

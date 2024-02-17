@@ -1,16 +1,21 @@
 package com.demirsoft.apiservice;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import com.demirsoft.apiservice.api.grpc.InventoryServiceGrpcClient;
 import com.demirsoft.apiservice.api.grpc.PaymentServiceGrpcClient;
 import com.demirsoft.apiservice.api.saga.SagaTransaction;
 import com.demirsoft.apiservice.api.services.inventory.InventoryRequest;
 import com.demirsoft.apiservice.api.services.inventory.InventoryResponse;
+import com.demirsoft.apiservice.api.services.inventory.InventoryService;
 import com.demirsoft.apiservice.api.services.inventory.InventoryStatus;
 import com.demirsoft.apiservice.api.services.inventory.InventoryTask;
 import com.demirsoft.apiservice.api.services.order.OrderRequest;
@@ -27,8 +32,15 @@ import reactor.core.publisher.Mono;
 public class SagaTransactionTest<T> {
     @Mock
     PaymentServiceGrpcClient paymentServiceGrpcClient;
+
     @Mock
-    InventoryServiceGrpcClient inventoryServiceGrpcClient;
+    InventoryService inventoryService;
+
+    @BeforeEach
+    public void setup() {
+        // if we don't call below, we will get NullPointerException
+        MockitoAnnotations.openMocks(this);
+    }
 
     @Test
     void createTaskTest() {
@@ -56,11 +68,19 @@ public class SagaTransactionTest<T> {
 
     @Test
     void createSagaTransactionTest() {
-        var paymentRequest = new PaymentRequest(2, 3, 4, 5, 10.0);
+        when(inventoryService.isProductAvailable(eq(new InventoryRequest(1, 2, 3, 4))))
+                .thenReturn(true);
+        when(inventoryService.drop(eq(new InventoryRequest(1, 2, 3, 4))))
+                .thenReturn(Mono.just(new InventoryResponse(1, 2, 3, 4, InventoryStatus.AVAILABLE)));
+
+        when(paymentServiceGrpcClient.charge(eq(new PaymentRequest(1, 2, 3, 4, 5.0))))
+                .thenReturn(Mono.just(new PaymentResponse(1, 2, 3, 4, 5.0, PaymentStatus.PAYMENT_COMPLETED)));
+
+        var paymentRequest = new PaymentRequest(1, 2, 3, 4, 5.0);
         var inventoryRequest = new InventoryRequest(1, 2, 3, 4);
 
         var paymentTask = new PaymentTask(paymentServiceGrpcClient, paymentRequest);
-        var inventoryTask = new InventoryTask(inventoryServiceGrpcClient, inventoryRequest);
+        var inventoryTask = new InventoryTask(inventoryService, inventoryRequest);
 
         SagaTransaction transaction = new SagaTransaction(
                 List.of(inventoryTask, paymentTask));
@@ -82,7 +102,15 @@ public class SagaTransactionTest<T> {
     void creatOrderTest() {
         var orderRequest = new OrderRequest(1, 2, 3, 4, 5.0);
 
-        var orderService = new OrderServiceImpl(paymentServiceGrpcClient, inventoryServiceGrpcClient);
+        var orderService = new OrderServiceImpl(paymentServiceGrpcClient, inventoryService);
+
+        when(inventoryService.isProductAvailable(eq(new InventoryRequest(1, 2, 3, 4))))
+                .thenReturn(true);
+        when(inventoryService.drop(eq(new InventoryRequest(1, 2, 3, 4))))
+                .thenReturn(Mono.just(new InventoryResponse(1, 2, 3, 4, InventoryStatus.AVAILABLE)));
+
+        when(paymentServiceGrpcClient.charge(eq(new PaymentRequest(1, 2, 3, 4, 5.0))))
+                .thenReturn(Mono.just(new PaymentResponse(1, 2, 3, 4, 5.0, PaymentStatus.PAYMENT_COMPLETED)));
 
         orderService.createOrder(orderRequest).subscribe(System.out::println);
     }
