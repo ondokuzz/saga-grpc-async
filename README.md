@@ -1,63 +1,40 @@
 # saga-grpc-async
-- 3 micro service
-  - 1 api, 1 controller, 1 postgre, 1 redis, 1 kafka
-  order -> async rest-> controller -> async grpc-> payment
-                                   -> async kafka-> delivery
-                                   -> async kafka-> e-mail
-                                   -> commit transaction info to db
-    
-  persist each task to atomic saga log
-  a service will read and perform events from the saga log
+- Saga pattern implementation with Spring Webflux and Grpc.
+- 3 micro services
+  - api (saga coordinator), payment and inventory services.
+  - create order -> process payment & drop amount from inventory.
+                    rollback both if any step fails.
+  - all operations (rest and grpc) will be async.
 
-- each controller auto scale according to active request count
-- kafka cluster
-- redis cluster
-- spring, grpc, postgre, redis async
-- grpc, kafka, rest calls
-- grpc server host:port'u kubernetes service discovery'den al
-- grpc response client'ta islenemediyse, server'da da rollback
-- service1 grpc to service2 grpc to service3 (trace the call)
-- await termination of grpc channels at the client side
-- await termination of grpc server at the server side
+
+todos:
+- move order coordinator to its own service
+- add more services, make some of them grpc and others kafka
+  api -> async rest: order -> async grpc: payment
+                           -> async grpc: inventory
+                           -> async kafka: delivery
+                           -> async kafka: e-mail
+                           -> implement transaction log (on postgre)
+                           -> retry failed transactions: order retry service (use state pattern for order state processing)
+    
+
+- kubernetes: auto scale according to active request count
+- implement load balancing for grpc calls (linkerd sidecar)
+- create kafka cluster
+- create redis cluster for order history retrieval
+- use kubernetes service names for grpc server host
 - create app specific exceptions
 - make grpc classes a java module and import from the microservices by building it into local maven repo
 - add grpc exception handling, timeout and retries
-- use async grpc
-- test grpc timeout on failure
-- make spring rest api async with webflux
-- make all business classes extend from an interface
-- diger servisler icin proxy yarat (feign gibi)
-- move toCompletableFuture to a Utility class.
-- GreeterGrpcServerManager can be a Utility class
-- rollback: all async: success, error, success, error:
-  on any error, rollback all
-  for error state responses, the server might or might not rollback
-= implement a deadletter system for each microservice
-= implement using quarqus
-- max retries'i properties'den al
-- jsend return et
+- re-implement using quarqus
+- return jsend format from rest apis
 - use springboot starter for @GrpcService @GrpcAdvice etc (yidongnan/grpc-spring-boot-starter)
-- add circuit breaker for grpc calls
+- add circuit breaker for calls to other services
 - implement tracing
+- add unit and integration tests
 
 # after implementation check, implement and document the following
-- unit tests
-- add project to git
-- implement redis cluster load balancing
-- integration tests
-  - test rest controller using Spring MvcTest mock
-- load balancing mechanisms
-- delete unnecessary comments
-- Autowired'lari constructor initialize'a cevir
 - use service names instead of ips (service discovery)
 - documentation
   - draw high level architecture
-  - define resillience mechannisms, grpc retry, linkerd
-  - implement swagger
-  - folder structure: 
-    project -> service1
-            -> service2
-               grpc
-                 proto
-               controllers
-               config
+  - create swagger
