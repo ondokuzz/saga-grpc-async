@@ -22,18 +22,18 @@ todos:
 - implement load balancing for grpc calls (linkerd sidecar)
 - create kafka cluster
 - create redis cluster for order history retrieval
-- use kubernetes service names for grpc server host
-- create app specific exceptions
+- create service specific exceptions
 - make grpc classes a java module and import from the microservices by building it into local maven repo
 - add grpc exception handling, timeout and retries
-- re-implement using quarqus
 - return jsend format from rest apis
 - use springboot starter for @GrpcService @GrpcAdvice etc (yidongnan/grpc-spring-boot-starter)
 - add circuit breaker for calls to other services
 - implement tracing
 - add unit and integration tests
+- re-implement using quarqus
 
 # after implementation check, implement and document the following
+- create test and production clusters
 - use service names instead of ips (service discovery)
 - documentation
   - draw high level architecture
