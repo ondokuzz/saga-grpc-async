@@ -25,18 +25,6 @@ public class ApiController {
         this.orderService = orderService;
     }
 
-    @GetMapping("/orders")
-    public Mono<String> getOrder() {
-        log.debug("getting order: {}");
-        StringBuilder sb = new StringBuilder(LocalTime.now().toString());
-        Map<String, String> env = System.getenv();
-        for (String envName : env.keySet()) {
-            sb.append(String.format("<br>%s=%s%n</b>", envName, env.get(envName)));
-        }
-        return Mono.just("env:" + sb.toString());
-
-    }
-
     @PostMapping("/orders")
     public Mono<OrderResponse> createOrder(@RequestBody OrderRequest orderRequest) {
         log.debug("creating order: {}", orderRequest);
