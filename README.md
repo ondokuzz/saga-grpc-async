@@ -1,10 +1,15 @@
 # saga-grpc-async
 - Saga pattern implementation with Spring Webflux and Grpc.
 - 3 micro services
-  - api (saga coordinator), payment and inventory services.
-  - create order -> process payment & drop amount from inventory.
-                    rollback both if any step fails.
+  ~~~
+  - api -> async rest: order -> async grpc: payment
+                             -> async grpc: inventory
+  
+  - create order: process payment & drop requested product count from inventory.
+                  rollback both operations if any of them fails.
+
   - all operations (rest and grpc) will be async.
+  ~~~
 
 # todos:
 - move order coordinator to its own service and call it from api service
