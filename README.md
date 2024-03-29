@@ -6,8 +6,7 @@
                     rollback both if any step fails.
   - all operations (rest and grpc) will be async.
 
-
-  todos:
+# todos:
 - move order coordinator to its own service
 - add more services, make some of them grpc and others kafka
   api -> async rest: order -> async grpc: payment
