@@ -10,11 +10,11 @@
 - move order coordinator to its own service and call it from api service
 - add more services, make some of them grpc and others kafka  
   -    api -> async rest: order -> async grpc: payment  
-  -                            -> async grpc: inventory  
-  *                            -> async kafka: delivery  
-  *                            -> async kafka: e-mail  
-  *                            -> implement transaction log (on postgre)  
-  *                            -> retry failed transactions: order retry service (use state pattern for order state processing)  
+                                -> async grpc: inventory  
+                                -> async kafka: delivery  
+                                -> async kafka: e-mail  
+                                -> implement transaction log (on postgre)  
+                                -> retry failed transactions: order retry service (use state pattern for order state processing)  
     
 
 - kubernetes: auto scale according to active request count
