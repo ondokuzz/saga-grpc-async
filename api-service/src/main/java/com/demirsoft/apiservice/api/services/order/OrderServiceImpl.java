@@ -32,29 +32,20 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Mono<OrderResponse> createOrder(OrderRequest orderRequest) {
-
+        if (!productAvailable(orderRequest))
+            return productUnavailableError(orderRequest);
+        
         var inventoryRequest = createInventoryRequest(orderRequest);
-        if (!productAvailable(inventoryRequest))
-            return productUnavailableError(inventoryRequest);
+        var inventoryTask = createInventoryTask(inventoryRequest);
 
         var paymentRequest = createPaymentRequest(orderRequest);
         var paymentTask = createPaymentTask(paymentRequest);
-
-        var inventoryTask = createInventoryTask(inventoryRequest);
 
         var taskList = List.<SagaTask<? extends TaskResponse>>of(paymentTask, inventoryTask);
         var taskResponses = executeTasks(taskList);
 
         return createCombinedResponse(orderRequest, taskResponses);
 
-    }
-
-    private Mono<OrderResponse> productUnavailableError(InventoryRequest inventoryRequest) {
-        return Mono.error(
-                new IllegalArgumentException(
-                        String.format("product: %d for amount: %d not available",
-                                inventoryRequest.productId(),
-                                inventoryRequest.productCount())));
     }
 
     private Mono<TaskResponse[]> executeTasks(List<SagaTask<? extends TaskResponse>> taskList) {
@@ -67,12 +58,21 @@ public class OrderServiceImpl implements OrderService {
         return new InventoryTask(this.inventoryService, inventoryRequest);
     }
 
-    private Boolean productAvailable(@Nonnull InventoryRequest inventoryRequest) {
+    private PaymentTask createPaymentTask(PaymentRequest paymentRequest) {
+        return new PaymentTask(this.paymentService, paymentRequest);
+    }
+    
+    private Boolean productAvailable(@Nonnull OrderRequest orderRequest) {
+        var inventoryRequest = createInventoryRequest(orderRequest);
         return inventoryService.isProductAvailable(inventoryRequest);
     }
 
-    private PaymentTask createPaymentTask(PaymentRequest paymentRequest) {
-        return new PaymentTask(this.paymentService, paymentRequest);
+    private Mono<OrderResponse> productUnavailableError(OrderRequest orderRequest) {
+        return Mono.error(
+                new IllegalArgumentException(
+                        String.format("product: %d for amount: %d not available",
+                                orderRequest.productId(),
+                                orderRequest.productCount())));
     }
 
     @Nonnull
@@ -89,7 +89,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderResponse createOrderResponse(OrderRequest orderRequest, Object[] taskResponses) {
-
         OrderStatus orderStatus = new OrderStatus();
         AtomicDouble totalPrice = new AtomicDouble(0.0);
 
@@ -134,5 +133,5 @@ public class OrderServiceImpl implements OrderService {
             return createOrderResponse(orderRequest, taskResponseArray);
         });
     }
-
+    
 }
